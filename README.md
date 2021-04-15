@@ -1,1 +1,2 @@
-# odin_web_example
+# Minimal HTTP/1.0 client example with Odin
+

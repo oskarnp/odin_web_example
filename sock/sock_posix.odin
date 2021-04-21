@@ -14,15 +14,28 @@ Sock_Addr :: struct {
 	data:   [14] byte,
 }
 
-Addr_Info :: struct {
-	flags:     c.int,
-	family:    c.int,
-	socktype:  c.int,
-	protocol:  c.int,
-	addrlen:   c.uint,
-	canonname: cstring,
-	addr:      ^Sock_Addr,
-	next:      ^Addr_Info,
+when ODIN_OS == "linux" {
+	Addr_Info :: struct {
+		flags:     c.int,
+		family:    c.int,
+		socktype:  c.int,
+		protocol:  c.int,
+		addrlen:   c.uint,
+		addr:      ^Sock_Addr,
+		canonname: cstring,
+		next:      ^Addr_Info,
+	}
+} else {
+	Addr_Info :: struct {
+		flags:     c.int,
+		family:    c.int,
+		socktype:  c.int,
+		protocol:  c.int,
+		addrlen:   c.uint,
+		canonname: cstring,
+		addr:      ^Sock_Addr,
+		next:      ^Addr_Info,
+	}
 }
 
 @(default_calling_convention="c")
@@ -67,11 +80,15 @@ tcp_open :: proc(host, port: string) -> (s: Socket, ok: bool) {
 
 	r = _posix_getaddrinfo(_temp_cstring(host), _temp_cstring(port), &hints, &res);
 	defer _posix_freeaddrinfo(res);
-	if r != 0 || res == nil do return {}, false;
+	if r != 0 || res == nil {
+		return {}, false;
+	}
 
 	for ai := res; ai != nil && !ok; ai = ai.next {
 		sfd := _posix_socket(ai.family, ai.socktype, ai.protocol);
-		if sfd == -1 do continue;
+		if sfd == -1 {
+			continue;
+		}
 
 		r = _posix_connect(sfd, ai.addr, ai.addrlen);
 		if r == -1 {
